@@ -1,10 +1,3 @@
-/**
- * @Author Sebastian Kubalski
- * @Email sebastian.kubalski@gmail.com
- * @Date Creation 05/06/2017
- * @Description
- */
-
 'use strict';
 const {Router} = require('express');
 const {Logger} = require('../../lib/logger');
