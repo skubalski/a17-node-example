@@ -1,0 +1,13 @@
+{
+  "name": "a17-node-example",
+  "description": "",
+  "keywords": [],
+  "website": "",
+  "image": "heroku/node",
+  "repository": "https://github.com/skubalski/a17-node-example",
+  "buildpacks": [
+    {
+      "url": "heroku/node"
+    }
+  ]
+}
