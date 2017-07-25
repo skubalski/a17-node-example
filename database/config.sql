@@ -63,9 +63,9 @@ CREATE FUNCTION a17_heroku.log_office(employee_id VARCHAR(18), office_id VARCHAR
 BEGIN
   IF is_already_present = TRUE
   THEN
-    SELECT a17_heroku.log_office_leave(employee_id, office_id);
+    PERFORM a17_heroku.log_office_leave(employee_id, office_id);
   ELSE
-    SELECT a17_heroku.log_office_entrance(employee_id, office_id);
+    PERFORM a17_heroku.log_office_entrance(employee_id, office_id);
   END IF;
 END;
 $$ LANGUAGE plpgsql;
