@@ -1,9 +1,10 @@
 'use strict';
 const {BaseRouter} = require('./base-router');
 const {InvalidCredentialsError, ServerError, BadRequestError} = require('../utilities/error-factory');
+const {queryResult} = require('pg-promise');
 
-const GET_VERIFIED_USER = 'SELECT * FROM a17_heroku.get_verified_user($[employeeEmail], $[verificationCode])';
-const LOG_OFFICE = 'SELECT a17_heroku.log_office($[employeeId], $[officeId], $[isAlreadyPresent])';
+const GET_VERIFIED_USER = 'a17_heroku.get_verified_user';
+const LOG_OFFICE = 'a17_heroku.log_office';
 
 class ValidationRouter extends BaseRouter {
     constructor() {
@@ -12,28 +13,29 @@ class ValidationRouter extends BaseRouter {
         this._setRoutes();
     }
 
-    async _validate(req, res, next) {
-        try {
-            if (req.body.email && req.body.password) {
-                const user = await this._pgDb.oneOrNone(GET_VERIFIED_USER, {
-                    employeeEmail: req.body.email,
-                    verificationCode: req.body.password
-                });
-                if(user) {
-                    await this._pgDb.none(LOG_OFFICE, {
-                        employeeId: user.user_id,
-                        officeId: user.account_id,
-                        isAlreadyPresent: user.is_already_present
-                    });
-                } else {
-                    this._responseFactory.propagateError(next, new InvalidCredentialsError(err));
+    _validate(req, res, next) {
+        if (req.body.email && req.body.password) {
+            this._pgDb.task(async conn => {
+                try {
+                    const user = await conn.func(
+                        GET_VERIFIED_USER,
+                        [req.body.email, req.body.password],
+                        queryResult.one | queryResult.none
+                    );
+                    if (user) {
+                        await conn.func(LOG_OFFICE,
+                            [user.user_id, user.account_id, user.is_already_present]
+                        );
+                    } else {
+                        this._responseFactory.propagateError(next, new InvalidCredentialsError());
+                    }
+                    this._responseFactory.buildSuccessResponse(res, 200);
+                } catch (err) {
+                    this._responseFactory.propagateError(next, new ServerError(err));
                 }
-                this._responseFactory.buildSuccessResponse(res, 200);
-            } else {
-                this._responseFactory.propagateError(next, new BadRequestError(err));
-            }
-        } catch (e) {
-            this._responseFactory.propagateError(next, new ServerError(err));
+            });
+        } else {
+            this._responseFactory.propagateError(next, new BadRequestError());
         }
     }
 

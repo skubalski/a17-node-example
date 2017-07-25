@@ -5,8 +5,9 @@ const {InvalidCredentialsError, ServerError, BadRequestError} =
 const {SalesforceHelper} = require('../../lib/salesforce-helper');
 const {QrHelper} = require('../../lib/qr-helper');
 const {EmailService} = require('../email-service');
+const {queryResult} = require('pg-promise');
 
-const GET_USER_BY_EMAIL = 'SELECT * FROM a17_heroku.get_user_by_email($[email])';
+const GET_USER_BY_EMAIL = 'a17_heroku.get_user_by_email';
 
 class ResetPasswordRouter extends BaseRouter {
     constructor() {
@@ -24,7 +25,9 @@ class ResetPasswordRouter extends BaseRouter {
     async _resetPassword(req, res, next) {
         try {
             if (req.body.email) {
-                const user = await this._pgDb.oneOrNone(GET_USER_BY_EMAIL, {email: req.body.email});
+                const user = await this._pgDb.task(conn => {
+                    return conn.func(GET_USER_BY_EMAIL, [req.body.email], queryResult.one | queryResult.none);
+                });
                 if (user) {
                     await this._salesforceHelper.login();
                     const updatedUser = await this._salesforceHelper.resetVerificationCode(user.id);
